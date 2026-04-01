@@ -76,7 +76,7 @@ export default function Home() {
                   <span className="gradient-text">Ease</span>
                   <br />
                   <span className="text-3xl sm:text-4xl lg:text-5xl text-gray-500 dark:text-gray-400 font-bold">
-                    Your Favourite Store
+                    Your Favourite Store v1
                   </span>
                 </h1>
               </FadeIn>
