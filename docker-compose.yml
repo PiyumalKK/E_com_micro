@@ -116,6 +116,8 @@ services:
     container_name: shopease-frontend
     ports:
       - "80:80"
+    environment:
+      - API_GATEWAY_URL=http://api-gateway:3000
     depends_on:
       - api-gateway
     networks:
