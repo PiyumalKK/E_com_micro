@@ -41,12 +41,12 @@ const perks = [
 ];
 
 const categories = [
-  { name: 'Electronics', emoji: '💻', color: 'from-blue-500 to-cyan-500' },
-  { name: 'Clothing', emoji: '👕', color: 'from-pink-500 to-rose-500' },
-  { name: 'Books', emoji: '📚', color: 'from-amber-500 to-orange-500' },
-  { name: 'Food', emoji: '🍕', color: 'from-green-500 to-emerald-500' },
-  { name: 'Sports', emoji: '⚽', color: 'from-purple-500 to-violet-500' },
-  { name: 'Other', emoji: '🎁', color: 'from-gray-500 to-slate-500' }
+  { name: 'Electronics', image: '/images/categories/electronics.png', color: 'from-blue-500 to-cyan-500' },
+  { name: 'Clothing', image: '/images/categories/clothing.png', color: 'from-pink-500 to-rose-500' },
+  { name: 'Books', image: '/images/categories/books.png', color: 'from-amber-500 to-orange-500' },
+  { name: 'Food', image: '/images/categories/food.png', color: 'from-green-500 to-emerald-500' },
+  { name: 'Sports', image: '/images/categories/sports.png', color: 'from-purple-500 to-violet-500' },
+  { name: 'Other', image: '/images/categories/other.png', color: 'from-gray-500 to-slate-500' }
 ];
 
 export default function Home() {
@@ -131,11 +131,10 @@ export default function Home() {
                     Trending Now
                   </h3>
                   {[
-                    { name: 'Wireless Headphones', price: '$79.99', tag: 'Best Seller', emoji: '🎧', color: 'bg-blue-500' },
-                    { name: 'Running Shoes', price: '$129.99', tag: 'New', emoji: '👟', color: 'bg-emerald-500' },
-                    { name: 'Smart Watch Pro', price: '$249.99', tag: 'Popular', emoji: '⌚', color: 'bg-purple-500' },
-                    { name: 'Organic Coffee Beans', price: '$24.99', tag: 'Top Rated', emoji: '☕', color: 'bg-orange-500' },
-                    { name: 'Yoga Mat Premium', price: '$49.99', tag: 'Trending', emoji: '🧘', color: 'bg-pink-500' }
+                    { name: 'Wireless Headphones', price: '$79.99', tag: 'Best Seller', image: '/images/products/wireless-headphones.png', color: 'bg-blue-500' },
+                    { name: 'Running Shoes', price: '$129.99', tag: 'New', image: '/images/products/running-shoes.png', color: 'bg-emerald-500' },
+                    { name: 'Smart Watch Pro', price: '$249.99', tag: 'Popular', image: '/images/products/smart-watch-pro.png', color: 'bg-purple-500' },
+                    { name: 'Organic Coffee Beans', price: '$24.99', tag: 'Top Rated', image: '/images/products/organic-coffee-beans.png', color: 'bg-orange-500' }
                   ].map((item, i) => (
                     <motion.div
                       key={item.name}
@@ -144,7 +143,9 @@ export default function Home() {
                       transition={{ delay: 0.5 + i * 0.1 }}
                       className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                     >
-                      <span className="text-2xl">{item.emoji}</span>
+                      <div className="w-[76px] h-[76px] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img src={item.image} alt={item.name} className="w-[76px] h-[76px] object-contain" />
+                      </div>
                       <span className="font-medium text-sm flex-1">{item.name}</span>
                       <span className="text-sm font-bold text-primary-600 dark:text-primary-400">{item.price}</span>
                       <span className="badge-primary text-[10px]">{item.tag}</span>
@@ -177,8 +178,8 @@ export default function Home() {
                   to={`/products?category=${cat.name.toLowerCase()}`}
                   className="glass-card p-6 text-center card-hover group cursor-pointer"
                 >
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center mx-auto mb-3 text-2xl group-hover:scale-110 transition-transform shadow-lg`}>
-                    {cat.emoji}
+                  <div className="w-[120px] h-[120px] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <img src={cat.image} alt={cat.name} className="w-[105px] h-[105px] object-contain drop-shadow-md" />
                   </div>
                   <p className="font-semibold text-sm">{cat.name}</p>
                 </Link>

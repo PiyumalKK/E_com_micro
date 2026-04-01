@@ -340,8 +340,8 @@ export default function AdminDashboard() {
               {products.map(product => (
                 <StaggerItem key={product._id}>
                   <div className="glass-card p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl flex-shrink-0">
-                      {{electronics: '💻', clothing: '👕', books: '📚', food: '🍕', sports: '⚽', other: '🎁'}[product.category] || '📦'}
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 p-2">
+                      <img src={{electronics: '/images/categories/electronics.png', clothing: '/images/categories/clothing.png', books: '/images/categories/books.png', food: '/images/categories/food.png', sports: '/images/categories/sports.png', other: '/images/categories/other.png'}[product.category] || '/images/categories/other.png'} alt={product.category} className="w-full h-full object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm truncate">{product.name}</h3>

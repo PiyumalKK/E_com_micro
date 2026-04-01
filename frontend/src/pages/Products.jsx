@@ -13,9 +13,9 @@ import {
 } from 'react-icons/hi';
 
 const CATEGORIES = ['all', 'electronics', 'clothing', 'books', 'food', 'sports', 'other'];
-const CATEGORY_ICONS = {
-  all: '🛒', electronics: '💻', clothing: '👕', books: '📚',
-  food: '🍕', sports: '⚽', other: '🎁'
+const CATEGORY_IMAGES = {
+  all: null, electronics: '/images/categories/electronics.png', clothing: '/images/categories/clothing.png', books: '/images/categories/books.png',
+  food: '/images/categories/food.png', sports: '/images/categories/sports.png', other: '/images/categories/other.png'
 };
 
 export default function Products() {
@@ -112,7 +112,7 @@ export default function Products() {
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
-              <span>{CATEGORY_ICONS[cat]}</span>
+              {CATEGORY_IMAGES[cat] ? <img src={CATEGORY_IMAGES[cat]} alt={cat} className="w-5 h-5 object-contain" /> : <HiOutlineShoppingBag className="w-5 h-5" />}
               {cat.charAt(0).toUpperCase() + cat.slice(1)}
             </button>
           ))}
@@ -205,8 +205,8 @@ function ProductCard({ product, onAddToCart, isAuthenticated }) {
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="text-5xl opacity-40">
-            {CATEGORY_ICONS[product.category] || '📦'}
+          <div className="w-20 h-20 opacity-40">
+            <img src={CATEGORY_IMAGES[product.category] || '/images/categories/other.png'} alt={product.category} className="w-full h-full object-contain" />
           </div>
         )}
 

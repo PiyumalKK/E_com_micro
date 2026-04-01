@@ -11,9 +11,9 @@ import {
   HiOutlinePlus, HiOutlineTag, HiOutlineCube, HiOutlineCheckCircle
 } from 'react-icons/hi';
 
-const CATEGORY_ICONS = {
-  electronics: '💻', clothing: '👕', books: '📚',
-  food: '🍕', sports: '⚽', other: '🎁'
+const CATEGORY_IMAGES = {
+  electronics: '/images/categories/electronics.png', clothing: '/images/categories/clothing.png', books: '/images/categories/books.png',
+  food: '/images/categories/food.png', sports: '/images/categories/sports.png', other: '/images/categories/other.png'
 };
 
 export default function ProductDetail() {
@@ -69,9 +69,9 @@ export default function ProductDetail() {
             {product.imageUrl ? (
               <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-[120px] opacity-30">
-                {CATEGORY_ICONS[product.category] || '📦'}
-              </span>
+              <div className="w-48 h-48 opacity-30">
+                <img src={CATEGORY_IMAGES[product.category] || '/images/categories/other.png'} alt={product.category} className="w-full h-full object-contain" />
+              </div>
             )}
           </motion.div>
 
