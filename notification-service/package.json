@@ -9,6 +9,10 @@
     "test": "jest --passWithNoTests --coverage --forceExit"
   },
   "dependencies": {
+    "@azure/identity": "^4.4.0",
+    "@azure/keyvault-secrets": "^4.8.0",
+    "@azure/service-bus": "^7.9.5",
+    "applicationinsights": "^2.9.5",
     "axios": "^1.7.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

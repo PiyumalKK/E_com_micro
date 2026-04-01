@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const productController = require('../controllers/product.controller');
 const { authenticate, requireAdmin } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validate.middleware');
+const upload = require('../middleware/upload.middleware');
 
 const router = express.Router();
 
@@ -192,5 +193,31 @@ router.get('/validate/:productId', productController.validateProduct);
  *         description: Stock updated
  */
 router.patch('/stock/:productId', productController.updateStock);
+
+/**
+ * @swagger
+ * /api/products/upload-image:
+ *   post:
+ *     summary: Upload a product image to Azure Blob Storage (admin only)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded, returns URL
+ *       503:
+ *         description: Blob storage not configured
+ */
+router.post('/upload-image', authenticate, requireAdmin, upload.single('image'), productController.uploadProductImage);
 
 module.exports = router;

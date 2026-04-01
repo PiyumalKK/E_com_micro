@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Order = require('../models/order.model');
+const { isServiceBusEnabled, publishOrderEvent } = require('../services/servicebus');
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://localhost:3002';
@@ -72,17 +73,27 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // 5. Send notification via Notification Service (inter-service communication)
+    // 5. Send notification via Service Bus (or HTTP fallback)
     try {
-      await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
-        userId,
-        userEmail: userData.email,
-        userName: userData.name,
-        type: 'order_confirmation',
-        title: 'Order Confirmed',
-        message: `Your order #${order._id} has been confirmed. Total: $${totalAmount.toFixed(2)}`,
-        metadata: { orderId: order._id, totalAmount }
-      });
+      if (isServiceBusEnabled()) {
+        await publishOrderEvent('order_confirmed', {
+          userId,
+          userEmail: userData.email,
+          userName: userData.name,
+          orderId: order._id,
+          totalAmount
+        });
+      } else {
+        await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
+          userId,
+          userEmail: userData.email,
+          userName: userData.name,
+          type: 'order_confirmation',
+          title: 'Order Confirmed',
+          message: `Your order #${order._id} has been confirmed. Total: $${totalAmount.toFixed(2)}`,
+          metadata: { orderId: order._id, totalAmount }
+        });
+      }
     } catch (error) {
       console.error('Failed to send notification:', error.message);
       // Non-critical - order still succeeds
@@ -136,17 +147,27 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Notify user about status change
+    // Notify user about status change via Service Bus (or HTTP fallback)
     try {
-      await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
-        userId: order.userId,
-        userEmail: order.userEmail,
-        userName: order.userName,
-        type: 'order_status_update',
-        title: 'Order Status Updated',
-        message: `Your order #${order._id} status has been updated to: ${status}`,
-        metadata: { orderId: order._id, status }
-      });
+      if (isServiceBusEnabled()) {
+        await publishOrderEvent('order_status_updated', {
+          userId: order.userId,
+          userEmail: order.userEmail,
+          userName: order.userName,
+          orderId: order._id,
+          status
+        });
+      } else {
+        await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
+          userId: order.userId,
+          userEmail: order.userEmail,
+          userName: order.userName,
+          type: 'order_status_update',
+          title: 'Order Status Updated',
+          message: `Your order #${order._id} status has been updated to: ${status}`,
+          metadata: { orderId: order._id, status }
+        });
+      }
     } catch (error) {
       console.error('Failed to send status notification:', error.message);
     }
@@ -188,17 +209,26 @@ exports.cancelOrder = async (req, res) => {
       }
     }
 
-    // Send cancellation notification
+    // Send cancellation notification via Service Bus (or HTTP fallback)
     try {
-      await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
-        userId: order.userId,
-        userEmail: order.userEmail,
-        userName: order.userName,
-        type: 'order_cancelled',
-        title: 'Order Cancelled',
-        message: `Your order #${order._id} has been cancelled.`,
-        metadata: { orderId: order._id }
-      });
+      if (isServiceBusEnabled()) {
+        await publishOrderEvent('order_cancelled', {
+          userId: order.userId,
+          userEmail: order.userEmail,
+          userName: order.userName,
+          orderId: order._id
+        });
+      } else {
+        await axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
+          userId: order.userId,
+          userEmail: order.userEmail,
+          userName: order.userName,
+          type: 'order_cancelled',
+          title: 'Order Cancelled',
+          message: `Your order #${order._id} has been cancelled.`,
+          metadata: { orderId: order._id }
+        });
+      }
     } catch (error) {
       console.error('Failed to send cancellation notification:', error.message);
     }

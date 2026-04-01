@@ -1,3 +1,18 @@
+// Application Insights - must be initialized before other imports
+const appInsights = require('applicationinsights');
+if (process.env.APPINSIGHTS_CONNECTION_STRING) {
+  appInsights.setup(process.env.APPINSIGHTS_CONNECTION_STRING)
+    .setAutoCollectRequests(true)
+    .setAutoCollectPerformance(true, true)
+    .setAutoCollectExceptions(true)
+    .setAutoCollectDependencies(true)
+    .setAutoCollectConsole(true, true)
+    .setDistributedTracingMode(appInsights.DistributedTracingModes.AI_AND_W3C)
+    .setSendLiveMetrics(true)
+    .start();
+  console.log('Application Insights initialized');
+}
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -5,6 +20,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const { loadSecrets } = require('./config/keyvault');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -87,7 +103,10 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  // Load secrets from Key Vault (if configured)
+  await loadSecrets();
+
   console.log(`API Gateway running on port ${PORT}`);
   console.log('Proxying to services:');
   Object.entries(services).forEach(([name, url]) => {

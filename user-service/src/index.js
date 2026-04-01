@@ -1,3 +1,18 @@
+// Application Insights - must be initialized before other imports
+const appInsights = require('applicationinsights');
+if (process.env.APPINSIGHTS_CONNECTION_STRING) {
+  appInsights.setup(process.env.APPINSIGHTS_CONNECTION_STRING)
+    .setAutoCollectRequests(true)
+    .setAutoCollectPerformance(true, true)
+    .setAutoCollectExceptions(true)
+    .setAutoCollectDependencies(true)
+    .setAutoCollectConsole(true, true)
+    .setDistributedTracingMode(appInsights.DistributedTracingModes.AI_AND_W3C)
+    .setSendLiveMetrics(true)
+    .start();
+  console.log('Application Insights initialized');
+}
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -7,6 +22,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const { loadSecrets } = require('./config/keyvault');
 
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
@@ -96,6 +112,9 @@ const connectWithRetry = async (uri, retries = 5, delay = 5000) => {
 
 const startServer = async () => {
   try {
+    // Load secrets from Key Vault (if configured)
+    await loadSecrets();
+
     await connectWithRetry(process.env.MONGODB_URI || 'mongodb://localhost:27017/shopease-users');
     
     app.listen(PORT, () => {
