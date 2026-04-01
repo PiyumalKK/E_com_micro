@@ -1,10 +1,12 @@
 name: Order Service CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'order-service/**'
+      - '.github/workflows/order-service.yml'
   pull_request:
     branches: [main]
     paths:

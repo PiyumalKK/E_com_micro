@@ -1,10 +1,12 @@
 name: Product Service CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'product-service/**'
+      - '.github/workflows/product-service.yml'
   pull_request:
     branches: [main]
     paths:
