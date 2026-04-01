@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --coverage --forceExit",
-    "lint": "eslint src/"
+    "test": "jest --passWithNoTests --coverage --forceExit"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

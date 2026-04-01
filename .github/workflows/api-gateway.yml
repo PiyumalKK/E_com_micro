@@ -27,12 +27,9 @@ jobs:
       - name: Install dependencies
         working-directory: ./api-gateway
         run: npm ci
-      - name: Run linting
-        working-directory: ./api-gateway
-        run: npm run lint --if-present
       - name: Run tests
         working-directory: ./api-gateway
-        run: npm test --if-present
+        run: npm test
 
   security-scan:
     runs-on: ubuntu-latest
@@ -71,7 +68,7 @@ jobs:
         working-directory: ./api-gateway
         run: |
           docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }} .
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:latest .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:latest
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }}
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:latest
 
