@@ -11,8 +11,10 @@ RUN npm run build
 # Production stage - serve with nginx
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 ENV API_GATEWAY_URL=http://api-gateway:3000
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://localhost:80/ || exit 1
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
