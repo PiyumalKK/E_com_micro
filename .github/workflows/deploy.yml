@@ -3,29 +3,39 @@ name: CI/CD Pipeline
 on:
   workflow_dispatch:
     inputs:
-      service:
-        description: 'Select service to deploy'
-        required: true
-        type: choice
-        options:
-          - api-gateway
-          - frontend
-          - user-service
-          - product-service
-          - order-service
-          - notification-service
+      api-gateway:
+        description: '🚀 API Gateway'
+        type: boolean
+        default: false
+      frontend:
+        description: '🌐 Frontend'
+        type: boolean
+        default: false
+      user-service:
+        description: '👤 User Service'
+        type: boolean
+        default: false
+      product-service:
+        description: '📦 Product Service'
+        type: boolean
+        default: false
+      order-service:
+        description: '🛒 Order Service'
+        type: boolean
+        default: false
+      notification-service:
+        description: '🔔 Notification Service'
+        type: boolean
+        default: false
       skip-deploy:
-        description: 'Skip build & deploy (run tests + scans only)'
-        required: false
+        description: '⏭️ Skip build & deploy (tests + scans only)'
         type: boolean
         default: false
 
-env:
-  SERVICE_NAME: ${{ github.event.inputs.service }}
-  CONTAINER_APP_NAME: ${{ github.event.inputs.service }}
-
 jobs:
-  test:
+  # ==================== API GATEWAY ====================
+  test-api-gateway:
+    if: ${{ github.event.inputs.api-gateway == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,41 +43,31 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: ${{ github.event.inputs.service }}/package-lock.json
-      - name: Install dependencies
-        working-directory: ./${{ github.event.inputs.service }}
-        run: npm ci
-      - name: Run tests / build
-        working-directory: ./${{ github.event.inputs.service }}
-        run: |
-          if [ "${{ github.event.inputs.service }}" = "frontend" ]; then
-            npm run build
-          else
-            npm test
-          fi
+          cache-dependency-path: api-gateway/package-lock.json
+      - run: cd api-gateway && npm ci && npm test
 
-  snyk-scan:
+  snyk-api-gateway:
+    if: ${{ github.event.inputs.api-gateway == 'true' }}
+    needs: test-api-gateway
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        working-directory: ./${{ github.event.inputs.service }}
-        run: npm install
-      - name: Run Snyk vulnerability scan
+      - run: cd api-gateway && npm install
+      - name: Snyk Scan
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high --file=${{ github.event.inputs.service }}/package.json
+          args: --severity-threshold=high --file=api-gateway/package.json
 
-  sonar-scan:
+  sonar-api-gateway:
+    if: ${{ github.event.inputs.api-gateway == 'true' }}
+    needs: test-api-gateway
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v4
       - name: SonarCloud Scan
@@ -77,38 +77,414 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  build-and-push:
+  build-api-gateway:
+    if: ${{ github.event.inputs.api-gateway == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: [snyk-api-gateway, sonar-api-gateway]
     runs-on: ubuntu-latest
-    needs: [test, snyk-scan, sonar-scan]
-    if: ${{ github.event.inputs.skip-deploy != 'true' }}
     steps:
       - uses: actions/checkout@v4
-      - name: Login to Azure Container Registry
-        uses: azure/docker-login@v2
+      - uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.ACR_NAME }}.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-      - name: Build and push Docker image
-        working-directory: ./${{ github.event.inputs.service }}
-        run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }} .
-          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:latest
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:latest
+      - run: |
+          cd api-gateway
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/api-gateway:${{ github.sha }} .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/api-gateway:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/api-gateway:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/api-gateway:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/api-gateway:latest
 
-  deploy:
+  deploy-api-gateway:
+    if: ${{ github.event.inputs.api-gateway == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: build-api-gateway
     runs-on: ubuntu-latest
-    needs: build-and-push
-    if: ${{ github.event.inputs.skip-deploy != 'true' }}
     steps:
-      - name: Login to Azure
-        uses: azure/login@v2
+      - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy-action@v1
+      - uses: azure/container-apps-deploy-action@v1
         with:
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          containerAppName: ${{ env.CONTAINER_APP_NAME }}
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          containerAppName: api-gateway
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/api-gateway:${{ github.sha }}
+
+  # ==================== FRONTEND ====================
+  test-frontend:
+    if: ${{ github.event.inputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci && npm run build
+
+  snyk-frontend:
+    if: ${{ github.event.inputs.frontend == 'true' }}
+    needs: test-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd frontend && npm install
+      - name: Snyk Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=frontend/package.json
+
+  sonar-frontend:
+    if: ${{ github.event.inputs.frontend == 'true' }}
+    needs: test-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build-frontend:
+    if: ${{ github.event.inputs.frontend == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: [snyk-frontend, sonar-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - run: |
+          cd frontend
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }} .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest
+
+  deploy-frontend:
+    if: ${{ github.event.inputs.frontend == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: frontend
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+
+  # ==================== USER SERVICE ====================
+  test-user-service:
+    if: ${{ github.event.inputs.user-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: user-service/package-lock.json
+      - run: cd user-service && npm ci && npm test
+
+  snyk-user-service:
+    if: ${{ github.event.inputs.user-service == 'true' }}
+    needs: test-user-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd user-service && npm install
+      - name: Snyk Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=user-service/package.json
+
+  sonar-user-service:
+    if: ${{ github.event.inputs.user-service == 'true' }}
+    needs: test-user-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build-user-service:
+    if: ${{ github.event.inputs.user-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: [snyk-user-service, sonar-user-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - run: |
+          cd user-service
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/user-service:${{ github.sha }} .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/user-service:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/user-service:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/user-service:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/user-service:latest
+
+  deploy-user-service:
+    if: ${{ github.event.inputs.user-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: build-user-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: user-service
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/user-service:${{ github.sha }}
+
+  # ==================== PRODUCT SERVICE ====================
+  test-product-service:
+    if: ${{ github.event.inputs.product-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: product-service/package-lock.json
+      - run: cd product-service && npm ci && npm test
+
+  snyk-product-service:
+    if: ${{ github.event.inputs.product-service == 'true' }}
+    needs: test-product-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd product-service && npm install
+      - name: Snyk Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=product-service/package.json
+
+  sonar-product-service:
+    if: ${{ github.event.inputs.product-service == 'true' }}
+    needs: test-product-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build-product-service:
+    if: ${{ github.event.inputs.product-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: [snyk-product-service, sonar-product-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - run: |
+          cd product-service
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/product-service:${{ github.sha }} .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/product-service:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/product-service:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/product-service:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/product-service:latest
+
+  deploy-product-service:
+    if: ${{ github.event.inputs.product-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: build-product-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: product-service
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/product-service:${{ github.sha }}
+
+  # ==================== ORDER SERVICE ====================
+  test-order-service:
+    if: ${{ github.event.inputs.order-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: order-service/package-lock.json
+      - run: cd order-service && npm ci && npm test
+
+  snyk-order-service:
+    if: ${{ github.event.inputs.order-service == 'true' }}
+    needs: test-order-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd order-service && npm install
+      - name: Snyk Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=order-service/package.json
+
+  sonar-order-service:
+    if: ${{ github.event.inputs.order-service == 'true' }}
+    needs: test-order-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build-order-service:
+    if: ${{ github.event.inputs.order-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: [snyk-order-service, sonar-order-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - run: |
+          cd order-service
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/order-service:${{ github.sha }} .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/order-service:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/order-service:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/order-service:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/order-service:latest
+
+  deploy-order-service:
+    if: ${{ github.event.inputs.order-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: build-order-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: order-service
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/order-service:${{ github.sha }}
+
+  # ==================== NOTIFICATION SERVICE ====================
+  test-notification-service:
+    if: ${{ github.event.inputs.notification-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: notification-service/package-lock.json
+      - run: cd notification-service && npm ci && npm test
+
+  snyk-notification-service:
+    if: ${{ github.event.inputs.notification-service == 'true' }}
+    needs: test-notification-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd notification-service && npm install
+      - name: Snyk Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=notification-service/package.json
+
+  sonar-notification-service:
+    if: ${{ github.event.inputs.notification-service == 'true' }}
+    needs: test-notification-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build-notification-service:
+    if: ${{ github.event.inputs.notification-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: [snyk-notification-service, sonar-notification-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - run: |
+          cd notification-service
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/notification-service:${{ github.sha }} .
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/notification-service:${{ github.sha }} ${{ secrets.ACR_NAME }}.azurecr.io/notification-service:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/notification-service:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/notification-service:latest
+
+  deploy-notification-service:
+    if: ${{ github.event.inputs.notification-service == 'true' && github.event.inputs.skip-deploy != 'true' }}
+    needs: build-notification-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/container-apps-deploy-action@v1
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: notification-service
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/notification-service:${{ github.sha }}
