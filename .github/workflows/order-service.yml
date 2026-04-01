@@ -2,15 +2,6 @@ name: Order Service CI/CD
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'order-service/**'
-      - '.github/workflows/order-service.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'order-service/**'
 
 env:
   SERVICE_NAME: order-service
@@ -33,7 +24,7 @@ jobs:
         working-directory: ./order-service
         run: npm test
 
-  security-scan:
+  snyk-scan:
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -51,6 +42,12 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high --file=order-service/package.json
+
+  sonar-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         continue-on-error: true
@@ -60,7 +57,7 @@ jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
-    needs: [test, security-scan]
+    needs: [test, snyk-scan, sonar-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4

@@ -2,15 +2,6 @@ name: User Service CI/CD
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'user-service/**'
-      - '.github/workflows/user-service.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'user-service/**'
 
 env:
   SERVICE_NAME: user-service
@@ -39,8 +30,8 @@ jobs:
         working-directory: ./user-service
         run: npm test
 
-  # Job 2: Security Scan (DevSecOps)
-  security-scan:
+  # Job 2: Snyk Vulnerability Scan
+  snyk-scan:
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -63,7 +54,15 @@ jobs:
         with:
           args: --severity-threshold=high --file=user-service/package.json
           command: test
-      
+
+  # Job 3: SonarCloud Code Analysis
+  sonar-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         continue-on-error: true
@@ -71,10 +70,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # Job 3: Build and Push Docker Image
+  # Job 4: Build and Push Docker Image
   build-and-push:
     runs-on: ubuntu-latest
-    needs: [test, security-scan]
+    needs: [test, snyk-scan, sonar-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout code

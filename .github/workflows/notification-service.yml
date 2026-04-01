@@ -2,15 +2,6 @@ name: Notification Service CI/CD
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'notification-service/**'
-      - '.github/workflows/notification-service.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'notification-service/**'
 
 env:
   SERVICE_NAME: notification-service
@@ -33,7 +24,7 @@ jobs:
         working-directory: ./notification-service
         run: npm test
 
-  security-scan:
+  snyk-scan:
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -51,6 +42,12 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high --file=notification-service/package.json
+
+  sonar-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         continue-on-error: true
@@ -60,7 +57,7 @@ jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
-    needs: [test, security-scan]
+    needs: [test, snyk-scan, sonar-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
