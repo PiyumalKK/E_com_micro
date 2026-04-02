@@ -6,9 +6,6 @@ node_modules/
 .env.local
 .env.*.local
 
-# Docker compose (contains sensitive env vars)
-docker-compose.yml
-
 # IDE
 .vscode/
 .idea/

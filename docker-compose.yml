@@ -1,0 +1,129 @@
+services:
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: shopease-user-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MONGODB_URI=${MONGODB_URI_BASE}/shopease-users?retryWrites=true&w=majority
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=24h
+      - NODE_ENV=development
+    networks:
+      - shopease-network
+    restart: unless-stopped
+
+  # Product Service
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: shopease-product-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - MONGODB_URI=${MONGODB_URI_BASE}/shopease-products?retryWrites=true&w=majority
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=development
+      - USER_SERVICE_URL=http://user-service:3001
+    networks:
+      - shopease-network
+    restart: unless-stopped
+
+  # Order Service
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: shopease-order-service
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - MONGODB_URI=${MONGODB_URI_BASE}/shopease-orders?retryWrites=true&w=majority
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=development
+      - USER_SERVICE_URL=http://user-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3004
+    depends_on:
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+    networks:
+      - shopease-network
+    restart: unless-stopped
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: shopease-notification-service
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - MONGODB_URI=${MONGODB_URI_BASE}/shopease-notifications?retryWrites=true&w=majority
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=development
+      - USER_SERVICE_URL=http://user-service:3001
+      - ORDER_SERVICE_URL=http://order-service:3003
+    depends_on:
+      user-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    networks:
+      - shopease-network
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: shopease-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - USER_SERVICE_URL=http://user-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - ORDER_SERVICE_URL=http://order-service:3003
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3004
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - notification-service
+    networks:
+      - shopease-network
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shopease-frontend
+    ports:
+      - "80:80"
+    environment:
+      - API_GATEWAY_URL=http://api-gateway:3000
+    depends_on:
+      - api-gateway
+    networks:
+      - shopease-network
+    restart: unless-stopped
+
+networks:
+  shopease-network:
+    driver: bridge
