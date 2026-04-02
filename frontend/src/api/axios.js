@@ -42,7 +42,14 @@ export const productAPI = {
   getOne: (id) => api.get(`/products/${id}`),
   create: (data) => api.post('/products', data),
   update: (id, data) => api.put(`/products/${id}`, data),
-  delete: (id) => api.delete(`/products/${id}`)
+  delete: (id) => api.delete(`/products/${id}`),
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post('/products/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
 };
 
 // ─── Orders ────────────────────────

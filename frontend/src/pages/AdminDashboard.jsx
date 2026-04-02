@@ -26,6 +26,7 @@ export default function AdminDashboard() {
     name: '', description: '', price: '', category: 'electronics', stock: '', imageUrl: ''
   });
   const [editingId, setEditingId] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -319,11 +320,42 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Image URL (optional)</label>
+                    <label className="block text-sm font-medium mb-1">Product Image</label>
+                    <div className="flex items-center gap-3">
+                      <label className={`btn-secondary text-sm cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploading ? 'Uploading...' : 'Upload Image'}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            setUploading(true);
+                            try {
+                              const res = await productAPI.uploadImage(file);
+                              setProductForm(p => ({ ...p, imageUrl: res.data.imageUrl }));
+                              toast.success('Image uploaded');
+                            } catch (err) {
+                              toast.error(err.response?.data?.error || 'Upload failed');
+                            } finally {
+                              setUploading(false);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                      {productForm.imageUrl && (
+                        <div className="flex items-center gap-2">
+                          <img src={productForm.imageUrl} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
+                          <button type="button" onClick={() => setProductForm(p => ({ ...p, imageUrl: '' }))} className="text-xs text-red-500 hover:text-red-400">Remove</button>
+                        </div>
+                      )}
+                    </div>
                     <input
                       value={productForm.imageUrl}
                       onChange={e => setProductForm(p => ({ ...p, imageUrl: e.target.value }))}
-                      className="input-field" placeholder="https://..."
+                      className="input-field mt-2 text-xs" placeholder="Or paste URL manually"
                     />
                   </div>
                   <div className="sm:col-span-2">
