@@ -48,3 +48,6 @@ docs/generate_architecture_gif*.py
 
 # Full project documentation (local reference only)
 docs/FULL_PROJECT_DOCUMENTATION.md
+
+# ARM template (local reference only)
+docs/template.json
