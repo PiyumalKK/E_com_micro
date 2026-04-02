@@ -41,6 +41,10 @@ __pycache__/
 # Architecture diagram generated frames & icon cache
 docs/architecture_frames/
 docs/icon_cache/
+docs/generate_architecture_gif*.py
 
 # Assignment PDF (not source code)
 *.pdf
+
+# Full project documentation (local reference only)
+docs/FULL_PROJECT_DOCUMENTATION.md
