@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const User = require('../models/user.model');
+
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
@@ -20,6 +23,16 @@ exports.register = async (req, res) => {
 
     const user = await User.create({ name, email, password, role: role || 'user' });
     const token = generateToken(user._id, user.role);
+
+    // Send welcome notification (fire-and-forget)
+    axios.post(`${NOTIFICATION_SERVICE_URL}/api/notifications`, {
+      userId: user._id,
+      userEmail: user.email,
+      userName: user.name,
+      type: 'welcome',
+      title: 'Welcome to ShopEase!',
+      message: `Hi ${user.name}, welcome to ShopEase! Start exploring our products and enjoy your shopping experience.`
+    }).catch(err => console.log('Welcome notification failed:', err.message));
 
     res.status(201).json({
       message: 'User registered successfully',

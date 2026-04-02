@@ -65,6 +65,7 @@ export const orderAPI = {
 // ─── Notifications ─────────────────
 export const notificationAPI = {
   getAll: (params) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications', { params: { unreadOnly: 'true', limit: 1 } }),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/read-all')
 };

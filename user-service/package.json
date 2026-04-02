@@ -12,6 +12,7 @@
     "@azure/identity": "^4.4.0",
     "@azure/keyvault-secrets": "^4.8.0",
     "applicationinsights": "^2.9.5",
+    "axios": "^1.7.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

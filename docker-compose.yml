@@ -13,6 +13,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=24h
       - NODE_ENV=development
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3004
     networks:
       - shopease-network
     restart: unless-stopped
