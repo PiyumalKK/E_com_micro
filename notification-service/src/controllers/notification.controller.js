@@ -21,7 +21,7 @@ exports.createNotification = async (req, res) => {
     });
 
     // Simulate sending email notification
-    console.log(`[NOTIFICATION] Sending ${type} notification to ${userEmail}: ${title}`);
+    console.log(`[NOTIFICATION] Sending ${String(type).replace(/[\r\n]/g, '')} notification to ${String(userEmail).replace(/[\r\n]/g, '')}: ${String(title).replace(/[\r\n]/g, '')}`);
 
     res.status(201).json({ message: 'Notification created', notification });
   } catch (error) {
@@ -103,11 +103,12 @@ exports.markAllAsRead = async (req, res) => {
 exports.getOrderNotifications = async (req, res) => {
   try {
     const { orderId } = req.params;
+    const sanitizedOrderId = encodeURIComponent(String(orderId));
 
     // Fetch order details from Order Service (inter-service communication)
     let orderData;
     try {
-      const orderResponse = await axios.get(`${ORDER_SERVICE_URL}/api/orders/internal/${orderId}`);
+      const orderResponse = await axios.get(`${ORDER_SERVICE_URL}/api/orders/internal/${sanitizedOrderId}`);
       orderData = orderResponse.data.order;
     } catch (error) {
       return res.status(404).json({ error: 'Order not found' });

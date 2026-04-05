@@ -48,8 +48,8 @@ exports.getAllProducts = async (req, res) => {
 
     const query = { isActive: true };
 
-    if (category) query.category = category;
-    if (search) query.$text = { $search: search };
+    if (category) query.category = String(category);
+    if (search) query.$text = { $search: String(search) };
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));

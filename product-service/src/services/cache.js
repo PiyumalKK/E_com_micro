@@ -45,7 +45,7 @@ async function getCache(key) {
   if (!isCacheEnabled()) return null;
   try {
     const data = await redis.get(key);
-    if (data) console.log(`[Cache] HIT: ${key}`);
+    if (data) console.log(`[Cache] HIT: ${String(key).replace(/[\r\n]/g, '')}`);
     return data ? JSON.parse(data) : null;
   } catch {
     return null;
@@ -56,7 +56,7 @@ async function setCache(key, data, ttl = DEFAULT_TTL) {
   if (!isCacheEnabled()) return;
   try {
     await redis.setex(key, ttl, JSON.stringify(data));
-    console.log(`[Cache] SET: ${key} (TTL: ${ttl}s)`);
+    console.log(`[Cache] SET: ${String(key).replace(/[\r\n]/g, '')} (TTL: ${ttl}s)`);
   } catch { /* ignore cache write failures */ }
 }
 
@@ -66,7 +66,7 @@ async function invalidateCache(pattern) {
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
       await redis.del(...keys);
-      console.log(`[Cache] INVALIDATED: ${keys.length} keys matching ${pattern}`);
+      console.log(`[Cache] INVALIDATED: ${keys.length} keys matching ${String(pattern).replace(/[\r\n]/g, '')}`);
     }
   } catch { /* ignore */ }
 }

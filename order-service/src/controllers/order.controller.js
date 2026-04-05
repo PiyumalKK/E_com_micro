@@ -244,7 +244,7 @@ exports.getAllOrders = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     const query = {};
-    if (status) query.status = status;
+    if (status) query.status = String(status);
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
