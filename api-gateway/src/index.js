@@ -25,6 +25,9 @@ const { loadSecrets } = require('./config/keyvault');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy headers (required behind Azure Container Apps / nginx reverse proxy)
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
